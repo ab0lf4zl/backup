@@ -235,7 +235,30 @@ cat > "/root/ac-backup-${xmhs}.sh" <<EOL
 rm -f /root/ac-backup-${xmhs}.zip
 $ZIP
 echo -e "$comment" | zip -z /root/ac-backup-${xmhs}.zip
-curl -F chat_id="${chatid}" -F caption=\$'${caption}' -F parse_mode="HTML" -F document=@"/root/ac-backup-${xmhs}.zip" https://api.telegram.org/bot${tk}/sendDocument
+
+FILE="/root/ac-backup-${xmhs}.zip"
+MAX_SIZE=\$((45 * 1024 * 1024))
+FILE_SIZE=\$(stat -c%s "\$FILE")
+
+if [ "\$FILE_SIZE" -le "\$MAX_SIZE" ]; then
+    curl -F chat_id="${chatid}" \
+         -F caption=\$'${caption}' \
+         -F parse_mode="HTML" \
+         -F document=@"\$FILE" \
+         https://api.telegram.org/bot${tk}/sendDocument
+else
+    split -b 45M "\$FILE" "\${FILE}.part_"
+
+    for part in \${FILE}.part_*; do
+        curl -F chat_id="${chatid}" \
+             -F caption="Part: \$(basename "\$part")" \
+             -F document=@"\$part" \
+             https://api.telegram.org/bot${tk}/sendDocument
+        sleep 2
+    done
+
+    rm -f \${FILE}.part_*
+fi
 EOL
 
 
