@@ -241,20 +241,32 @@ MAX_SIZE=\$((45 * 1024 * 1024))
 FILE_SIZE=\$(stat -c%s "\$FILE")
 
 if [ "\$FILE_SIZE" -le "\$MAX_SIZE" ]; then
+    if [ ! -f "\$FILE" ]; then
+        echo "Error: Backup file not found: \$FILE"
+        exit 1
+    fi
     curl -F chat_id="${chatid}" \
          -F caption=\$'${caption}' \
          -F parse_mode="HTML" \
          -F document=@"\$FILE" \
          https://api.telegram.org/bot${tk}/sendDocument
 else
-    # Multi-volume ZIP استاندارد ویندوز
-    zip -s 45m /root/ac-backup-${xmhs}-mv.zip /root/ac-backup-${xmhs}.zip
-    rm -f /root/ac-backup-${xmhs}.zip
+    zip -s 45m /root/ac-backup-${xmhs}-mv.zip "\$FILE"
+    if [ \$? -ne 0 ]; then
+        echo "Error: Failed to create multi-volume zip"
+        exit 1
+    fi
+    rm -f "\$FILE"
 
     for vol in /root/ac-backup-${xmhs}-mv*; do
+        if [ ! -f "\$vol" ]; then
+            echo "Warning: Volume not found: \$vol, skipping..."
+            continue
+        fi
         curl -F chat_id="${chatid}" \
-             -F caption="Part: $(basename "$vol")" \
-             -F document=@"$vol" \
+             -F caption="Part: \$(basename "\$vol")" \
+             -F parse_mode="HTML" \
+             -F document=@"\$vol" \
              https://api.telegram.org/bot${tk}/sendDocument
         sleep 2
     done
