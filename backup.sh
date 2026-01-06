@@ -247,17 +247,19 @@ if [ "\$FILE_SIZE" -le "\$MAX_SIZE" ]; then
          -F document=@"\$FILE" \
          https://api.telegram.org/bot${tk}/sendDocument
 else
-    split -b 45M "\$FILE" "\${FILE}.part_"
+    # Multi-volume ZIP استاندارد ویندوز
+    zip -s 45m /root/ac-backup-${xmhs}-mv.zip /root/ac-backup-${xmhs}.zip
+    rm -f /root/ac-backup-${xmhs}.zip
 
-    for part in \${FILE}.part_*; do
+    for vol in /root/ac-backup-${xmhs}-mv*; do
         curl -F chat_id="${chatid}" \
-             -F caption="Part: \$(basename "\$part")" \
-             -F document=@"\$part" \
+             -F caption="Part: $(basename "$vol")" \
+             -F document=@"$vol" \
              https://api.telegram.org/bot${tk}/sendDocument
         sleep 2
     done
 
-    rm -f \${FILE}.part_*
+    rm -f /root/ac-backup-${xmhs}-mv*
 fi
 EOL
 
